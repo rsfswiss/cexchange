@@ -58,15 +58,73 @@ public class CurrExRestControllerTest {
     public void setup() throws Exception {
         this.mockMvc = webAppContextSetup(webApplicationContext).build();
 
+        //TODO mock service with currency values
+
     }
 
     @Test
-    public void testTemplateMethod() throws Exception {
-        mockMvc.perform(post("/currex/exchange")
-                .content(this.json("Hello World!"))
+    public void testGetEurExchgRateForISO8601Date() throws Exception {
+        //YYYYMMDD is the ISO8601, the format we support
+        mockMvc.perform(get("/eurocurrex/USD/20170511")
+                .content(this.json("1.086"))
+                .contentType(contentType))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/eurocurrex/JPY/20170511")
+                .content(this.json("123.69"))
                 .contentType(contentType))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    public void testGetEurExchgRateForISO8601DateTooOld() throws Exception {
+        //YYYYMMDD is the ISO8601, the format we support
+        mockMvc.perform(get("/eurocurrex/USD/20170511")
+                .contentType(contentType))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void testGetEurExchgRateForISO8601CurrencyDoesNotExist() throws Exception {
+        //YYYYMMDD is the ISO8601, the format we support
+        mockMvc.perform(get("/eurocurrex/ERR/20170511")
+                .contentType(contentType))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void testGetEurExchgRateForUnrecognizedDateFormat() throws Exception {
+        //YYYYMMDD is the ISO8601, the format we support
+        mockMvc.perform(get("/eurocurrex/USD/05-11-2017")
+                .contentType(contentType))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testGetEurExchgRateForInvalidDate() throws Exception {
+        //YYYYMMDD is the ISO8601, the format we support
+        mockMvc.perform(get("/eurocurrex/USD/ERROR2017")
+                .contentType(contentType))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    //we do not list all dates at the moment
+    public void testMissingDate() throws Exception {
+        //YYYYMMDD is the ISO8601, the format we support
+        mockMvc.perform(get("/eurocurrex/USD")
+                .contentType(contentType))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testMissingURI() throws Exception {
+        //YYYYMMDD is the ISO8601, the format we support
+        mockMvc.perform(get("/eurocurrex")
+                .contentType(contentType))
+                .andExpect(status().isBadRequest());
+    }
+
 
     protected String json(Object o) throws IOException {
         MockHttpOutputMessage mockHttpOutputMessage = new MockHttpOutputMessage();
