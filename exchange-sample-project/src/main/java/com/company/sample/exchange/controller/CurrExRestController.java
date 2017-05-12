@@ -36,7 +36,7 @@ import java.util.Date;
  */
 @RestController
 @RequestMapping("/eurocurrex")
-public class CurrExRestController {
+public class CurrExRestController  {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
@@ -47,4 +47,11 @@ public class CurrExRestController {
     public String exchange(@PathVariable String currencyCode, @PathVariable Date chgRateDate) {
         return currExService.getExchangeRateForEuroAtDate(currencyCode,chgRateDate);
     }
+
+    @RequestMapping("/hello")
+    public String hello() {
+        log.debug("*********Dummy request");
+        return currExService.getExchangeRateForEuroAtDate("",null);
+    }
+
 }

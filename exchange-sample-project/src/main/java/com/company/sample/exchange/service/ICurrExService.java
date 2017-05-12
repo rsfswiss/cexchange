@@ -12,7 +12,7 @@ import java.util.Date;
  */
 public interface ICurrExService {
 
-    void fetchAndStoreExchangeRateInformation();
+    void fetchAndStoreExchangeRateInformation() throws Exception;
 
     String getExchangeRateForEuroAtDate(String currencyCode, Date chgRateDate);
 }
