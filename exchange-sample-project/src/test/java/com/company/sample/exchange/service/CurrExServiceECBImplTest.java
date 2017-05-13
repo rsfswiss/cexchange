@@ -42,7 +42,7 @@ public class CurrExServiceECBImplTest {
     }
 
     @Test
-    //to verify the scheduler cron expression from configuration
+    //to verify the scheduler cron expression from configuration at weekends
     public void testSchedulerWeekendDay(){
         //13/05/2017 was a Saturday
         ZonedDateTime fakeWeekendDayCurrentDate = ZonedDateTime.parse("2017-05-13T15:30:00+01:00[Europe/Zurich]");

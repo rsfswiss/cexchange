@@ -1,28 +1,32 @@
 package com.company.sample.exchange.controller;
 
 import com.company.sample.exchange.CurrExApplication;
+import com.company.sample.exchange.service.CurrExServiceCurrencyIncorrectException;
+import com.company.sample.exchange.service.CurrExServiceDateNotRecognizedException;
+import com.company.sample.exchange.service.CurrExServiceDateTooOldException;
+import com.company.sample.exchange.service.ICurrExService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.mock.http.MockHttpOutputMessage;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 
-import static org.junit.Assert.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.setup.MockMvcBuilders.*;
+import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 
 @RunWith(SpringRunner.class)
@@ -35,101 +39,105 @@ public class CurrExRestControllerTest {
             MediaType.APPLICATION_JSON.getSubtype(),
             Charset.forName("utf8"));
 
+    @MockBean
+    private ICurrExService currExService;
+
     private MockMvc mockMvc;
 
-    private HttpMessageConverter mappingJackson2HttpMessageConverter;
+    @Value("${currex.controller.uri.base}")
+    private String baseUri;
 
     @Autowired
     private WebApplicationContext webApplicationContext;
 
     @Autowired
-    void setConverters(HttpMessageConverter<?>[] converters) {
-
-        this.mappingJackson2HttpMessageConverter = Arrays.asList(converters).stream()
-                .filter(hmc -> hmc instanceof MappingJackson2HttpMessageConverter)
-                .findAny()
-                .orElse(null);
-
-        assertNotNull("the JSON message converter must not be null",
-                this.mappingJackson2HttpMessageConverter);
-    }
+    private Environment env;
 
     @Before
     public void setup() throws Exception {
         this.mockMvc = webAppContextSetup(webApplicationContext).build();
-
-        //TODO mock service with currency values
-
+        Mockito.doThrow(new Exception()).doNothing().when(currExService).fetchAndStoreExchangeRateInformation();
     }
 
     @Test
     public void testGetEurExchgRateForISO8601Date() throws Exception {
-        //YYYYMMDD is the ISO8601, the format we support
-        mockMvc.perform(get("/eurocurrex/USD/20170511")
-                .content(this.json("1.086"))
-                .contentType(contentType))
-                .andExpect(status().isOk());
+        given(currExService.getExchangeRateForEuroAtDate("USD","20170511")).
+                willReturn(1.086);
 
-        mockMvc.perform(get("/eurocurrex/JPY/20170511")
-                .content(this.json("123.69"))
+        //YYYYMMDD is the ISO8601, the format we support
+        mockMvc.perform(get("/"+baseUri+"/USD/20170511")
                 .contentType(contentType))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(content().string("1.086"));
+
+        given(currExService.getExchangeRateForEuroAtDate("JPY","20170511")).
+                willReturn(123.69);
+
+        mockMvc.perform(get("/"+baseUri+"/JPY/20170511")
+                .contentType(contentType))
+                .andExpect(status().isOk())
+                .andExpect(content().string("123.69"));
     }
 
     @Test
     public void testGetEurExchgRateForISO8601DateTooOld() throws Exception {
+        given(currExService.getExchangeRateForEuroAtDate("USD","20170511")).
+                willThrow(new CurrExServiceDateTooOldException());
         //YYYYMMDD is the ISO8601, the format we support
-        mockMvc.perform(get("/eurocurrex/USD/20170511")
+        mockMvc.perform(get("/"+baseUri+"/USD/20170511")
                 .contentType(contentType))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(env.getProperty("currex.controller.message.date.too.old")));
     }
 
     @Test
     public void testGetEurExchgRateForISO8601CurrencyDoesNotExist() throws Exception {
-        //YYYYMMDD is the ISO8601, the format we support
-        mockMvc.perform(get("/eurocurrex/ERR/20170511")
+        given(currExService.getExchangeRateForEuroAtDate("ERR","20170511")).
+                willThrow(new CurrExServiceCurrencyIncorrectException());
+        mockMvc.perform(get("/"+baseUri+"/ERR/20170511")
                 .contentType(contentType))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(env.getProperty("currex.controller.message.currency.incorrect")));
     }
 
     @Test
     public void testGetEurExchgRateForUnrecognizedDateFormat() throws Exception {
+        given(currExService.getExchangeRateForEuroAtDate("USD","05-11-2017")).
+                willThrow(new CurrExServiceDateNotRecognizedException());
         //YYYYMMDD is the ISO8601, the format we support
-        mockMvc.perform(get("/eurocurrex/USD/05-11-2017")
+        mockMvc.perform(get("/"+baseUri+"/USD/05-11-2017")
                 .contentType(contentType))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(env.getProperty("currex.controller.message.date.incorrect")));
     }
 
     @Test
     public void testGetEurExchgRateForInvalidDate() throws Exception {
+        given(currExService.getExchangeRateForEuroAtDate("USD","ERROR2017")).
+                willThrow(new CurrExServiceDateNotRecognizedException());
         //YYYYMMDD is the ISO8601, the format we support
-        mockMvc.perform(get("/eurocurrex/USD/ERROR2017")
+        mockMvc.perform(get("/"+baseUri+"/USD/ERROR2017")
                 .contentType(contentType))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(env.getProperty("currex.controller.message.date.incorrect")));
     }
 
     @Test
-    //we do not list all dates at the moment
+    //TODO we do not list all dates at the moment, this error should be detected by Spring REST
     public void testMissingDate() throws Exception {
-        //YYYYMMDD is the ISO8601, the format we support
-        mockMvc.perform(get("/eurocurrex/USD")
+        mockMvc.perform(get("/"+baseUri+"/USD")
                 .contentType(contentType))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(env.getProperty("currex.controller.message.resource.not.found")));
     }
 
     @Test
+    //TODO we do not list resources at the moment, this error should be detected by Spring REST
     public void testMissingURI() throws Exception {
-        //YYYYMMDD is the ISO8601, the format we support
-        mockMvc.perform(get("/eurocurrex")
+        mockMvc.perform(get("/"+baseUri)
                 .contentType(contentType))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(env.getProperty("currex.controller.message.resource.not.found")));
     }
 
-
-    protected String json(Object o) throws IOException {
-        MockHttpOutputMessage mockHttpOutputMessage = new MockHttpOutputMessage();
-        this.mappingJackson2HttpMessageConverter.write(
-                o, MediaType.APPLICATION_JSON, mockHttpOutputMessage);
-        return mockHttpOutputMessage.getBodyAsString();
-    }
 }

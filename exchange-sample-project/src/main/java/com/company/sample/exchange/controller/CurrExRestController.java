@@ -1,14 +1,15 @@
 package com.company.sample.exchange.controller;
 
-import com.company.sample.exchange.service.ICurrExService;
+import com.company.sample.exchange.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * Rest API for euro currency exchage rates.
@@ -30,12 +31,12 @@ import java.util.Date;
  * Will return code 404 (not found) when the information is not available, e.g. the
  * currency code does not exist in ECB, or the date is out of the 90 previous days range
  *
- * Will return a 400 (Bad Request) when the date can't be interpreted (is not ISO-8601, YYYYDDMM).
+ * Will return a 400 (Bad Request) when the date can't be interpreted (is not ISO-8601, YYYYMMDD).
  *
- * Produces JSON format responses and accepts both GET and POST requests.
+ * Produces JSON format responses and accepts only GET requests.
  */
 @RestController
-@RequestMapping("/eurocurrex")
+@RequestMapping(value = "${currex.controller.uri.base}", method = RequestMethod.GET, produces = "application/json")
 public class CurrExRestController  {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
@@ -43,15 +44,66 @@ public class CurrExRestController  {
     @Autowired
     private ICurrExService currExService;
 
+    @Autowired
+    private Environment env;
+
     @RequestMapping("/{currencyCode}/{chgRateDate}")
-    public String exchange(@PathVariable String currencyCode, @PathVariable Date chgRateDate) {
-        return currExService.getExchangeRateForEuroAtDate(currencyCode,chgRateDate);
+    public double exchange(@PathVariable String currencyCode, @PathVariable String chgRateDate) throws Exception
+    {
+        double exchangeRate;
+        exchangeRate = currExService.getExchangeRateForEuroAtDate(currencyCode, chgRateDate);
+        //TODO verify default spring double formatting
+        return exchangeRate;
     }
 
-    @RequestMapping("/hello")
-    public String hello() {
-        log.debug("*********Dummy request");
-        return currExService.getExchangeRateForEuroAtDate("",null);
+    @ExceptionHandler({CurrExServiceException.class, Exception.class})
+    public ResponseEntity<String> unDeterminedCurrExException(HttpServletRequest req, Exception e)
+    {
+        String error = env.getProperty("currex.controller.message.undetermined");
+        return new ResponseEntity<String>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+    @ExceptionHandler(CurrExServiceCurrencyNotAvailableException.class)
+    public ResponseEntity<String> currExServiceCurrencyNotAvailableException(HttpServletRequest req, Exception e)
+    {
+        String error = env.getProperty("currex.controller.message.currency.na");
+        return new ResponseEntity<String>(error, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(CurrExServiceDataNotFoundException.class)
+    public ResponseEntity<String> currExServiceDataNotFoundException(HttpServletRequest req, Exception e)
+    {
+        String error = env.getProperty("currex.controller.message.undetermined");
+        return new ResponseEntity<String>(error, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(CurrExServiceCurrencyIncorrectException.class)
+    public ResponseEntity<String> currExServiceCurrencyIncorrectException(HttpServletRequest req, Exception e)
+    {
+        String error = env.getProperty("currex.controller.message.currency.incorrect");
+        return new ResponseEntity<String>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(CurrExServiceDateNotRecognizedException.class)
+    public ResponseEntity<String> currExServiceDateNotRecognizedException(HttpServletRequest req, Exception e)
+    {
+        String error = env.getProperty("currex.controller.message.date.incorrect");
+        return new ResponseEntity<String>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(CurrExServiceDateTooNewException.class)
+    public ResponseEntity<String> currExServiceDateTooNewException(HttpServletRequest req, Exception e)
+    {
+        String error = env.getProperty("currex.controller.message.date.too.new");
+        return new ResponseEntity<String>(error, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(CurrExServiceDateTooOldException.class)
+    public ResponseEntity<String> currExServiceDateTooOldException(HttpServletRequest req, Exception e)
+    {
+        String error = env.getProperty("currex.controller.message.date.too.old");
+        return new ResponseEntity<String>(error, HttpStatus.NOT_FOUND);
+    }
+
 
 }

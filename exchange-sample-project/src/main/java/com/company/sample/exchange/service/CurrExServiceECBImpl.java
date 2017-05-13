@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.util.HashMap;
 
 /**
  * Implementation of the rate exchange service contract,
@@ -19,11 +19,13 @@ import java.util.Date;
  * and the date for which the rate is requested.
  */
 
-//singleton scope by default, de-couple scheduled fetch operation in case you change scope
+//singleton scope by default, de-couple scheduled fetch operation and data repository in case you change scope
 @Service
 public class CurrExServiceECBImpl implements ICurrExService {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
+
+    private HashMap<String,String> exchangeRatesRepository = new HashMap<>();
 
     /**
      * From:
@@ -39,10 +41,16 @@ public class CurrExServiceECBImpl implements ICurrExService {
         log.debug("############################ fetchAndStoreExchangeRateInformation executed  ############################ ");
     }
 
+    /**
+     *
+     * @param currencyCode
+     * @param chgRateDate
+     * @return the exchange rate in
+     */
     @Override
-    public String getExchangeRateForEuroAtDate(String currencyCode, Date chgRateDate) {
+    public double getExchangeRateForEuroAtDate(String currencyCode, String chgRateDate) throws CurrExServiceException {
         //WIP
-        return "Hello World";
+        return 0;
     }
 
 }
