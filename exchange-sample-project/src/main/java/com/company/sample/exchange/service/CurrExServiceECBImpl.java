@@ -30,11 +30,10 @@ public class CurrExServiceECBImpl implements ICurrExService {
      * http://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html#dev
      * "The reference rates are usually updated around 16:00 CET on every working day, except on TARGET closing days."
      *
-     * This method should at least execute every day at 16:00 CET and at application startup.
-     *
+     * This method should at least execute every day at 16:05 CET and at application startup.
      */
     @Override
-    @Scheduled(cron = "${currex.service.ecb.scheduler}")
+    @Scheduled(cron = "${currex.service.ecb.scheduler.cron}", zone = "${currex.service.ecb.scheduler.zone}")
     public void fetchAndStoreExchangeRateInformation() throws Exception{
         //WIP
         log.debug("############################ fetchAndStoreExchangeRateInformation executed  ############################ ");
