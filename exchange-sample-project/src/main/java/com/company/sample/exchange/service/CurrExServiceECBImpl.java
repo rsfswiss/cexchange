@@ -1,6 +1,5 @@
 package com.company.sample.exchange.service;
 
-import com.company.sample.exchange.domain.CurrExRateResource;
 import com.company.sample.exchange.domain.ICurrExRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

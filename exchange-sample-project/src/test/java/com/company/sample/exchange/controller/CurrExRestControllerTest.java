@@ -1,7 +1,7 @@
 package com.company.sample.exchange.controller;
 
 import com.company.sample.exchange.CurrExApplication;
-import com.company.sample.exchange.domain.CurrExRateResource;
+import com.company.sample.exchange.service.CurrExRateResource;
 import com.company.sample.exchange.service.CurrExServiceCurrencyIncorrectException;
 import com.company.sample.exchange.service.CurrExServiceDateNotRecognizedException;
 import com.company.sample.exchange.service.CurrExServiceDateTooOldException;

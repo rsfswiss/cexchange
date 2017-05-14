@@ -2,6 +2,8 @@ package com.company.sample.exchange.domain;
 
 import org.springframework.stereotype.Repository;
 
+import java.util.HashMap;
+
 /**
  * Wraps a Hasmap as a very simple <key,value> pair
  * in memory repository implementation for the currex sample project.
@@ -15,15 +17,26 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
 
+    //key is currencyCode#Date, e.g. USD#20170515
+    //value is the exchange rate, e.g. 125.6
+    private HashMap<String,String> inMemoryContainerMap = new HashMap<>();
+
+    //conveniently keeping track of the oldest inserted date
+    private String minAvailableDateStr = "00010101";
+
+    //conveniently keeping track of the newest inserted date
+    private String maxAvailableDateStr = "99991212";
 
     @Override
-    public void deleteAll() {
-        //WIP
+    public synchronized void deleteAll() {
+        inMemoryContainerMap.clear();
+        resetMaxAndMinAvailableDateStr();
     }
 
     @Override
-    public void addOverwriting(String exchangeRate, String currencyCode, String dateStr) {
-        //WIP
+    public synchronized void addOverwriting(String exchangeRate, String currencyCode, String dateStr) {
+        updateMaxAndMinAvailableDateStr(dateStr);
+        inMemoryContainerMap.put(generateKey(currencyCode, dateStr),exchangeRate);
     }
 
     /**
@@ -38,21 +51,36 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
      */
     @Override
     public String findByCurrencyCodeAndDate(String currencyCode, String dateStr) {
-        //WIP
-        return null;
+        return inMemoryContainerMap.get(generateKey(currencyCode, dateStr));
     }
 
     @Override
     public String getMaxAvailableDateStr() {
-        //WIP
-        return "";
+        return maxAvailableDateStr;
     }
 
     @Override
     public String getMinAvailableDateStr() {
-        //WIP
-        return "";
+        return minAvailableDateStr;
     }
+
+    private String generateKey(String currencyCode, String dateStr) {
+        return currencyCode.toUpperCase()+"#"+dateStr;
+    }
+
+    private void resetMaxAndMinAvailableDateStr() {
+        minAvailableDateStr = "99991212";
+        maxAvailableDateStr = "00010101";
+    }
+
+    private void updateMaxAndMinAvailableDateStr(String dateStr) {
+        if(inMemoryContainerMap.isEmpty() || dateStr.compareTo(getMaxAvailableDateStr()) > 0)
+            maxAvailableDateStr = dateStr;
+
+        if(inMemoryContainerMap.isEmpty() || dateStr.compareTo(getMinAvailableDateStr()) < 0)
+            minAvailableDateStr = dateStr;
+    }
+
 
 
 }

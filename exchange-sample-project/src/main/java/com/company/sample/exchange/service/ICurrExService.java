@@ -1,7 +1,5 @@
 package com.company.sample.exchange.service;
 
-import com.company.sample.exchange.domain.CurrExRateResource;
-
 /**
  * Service definition for exchange rate data.
  * Provides method definitions to obtain and persist

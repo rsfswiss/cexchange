@@ -1,4 +1,4 @@
-package com.company.sample.exchange.domain;
+package com.company.sample.exchange.service;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

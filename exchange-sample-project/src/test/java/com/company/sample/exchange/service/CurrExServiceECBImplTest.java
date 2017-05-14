@@ -1,7 +1,6 @@
 package com.company.sample.exchange.service;
 
 import com.company.sample.exchange.CurrExApplication;
-import com.company.sample.exchange.domain.CurrExRateResource;
 import com.company.sample.exchange.domain.ICurrExRepository;
 import org.junit.Assert;
 import org.junit.Before;
