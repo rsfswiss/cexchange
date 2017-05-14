@@ -1,6 +1,8 @@
 package com.company.sample.exchange.service;
 
 import com.company.sample.exchange.CurrExApplication;
+import com.company.sample.exchange.CurrExApplicationInitializer;
+import com.company.sample.exchange.connector.ecb.CurrExServiceECBConnector;
 import com.company.sample.exchange.domain.ICurrExRepository;
 import org.junit.Assert;
 import org.junit.Before;
@@ -18,9 +20,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.Objects;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 @RunWith(SpringRunner.class)
@@ -31,18 +38,23 @@ public class CurrExServiceECBImplTest {
     @Value("${currex.service.ecb.scheduler.cron}")
     private String cronExpression;
 
-    @MockBean
-    private ICurrExRepository currExRepository;
-
     @Autowired
     private WebApplicationContext webApplicationContext;
 
     @Autowired
     private ICurrExService currExService;
 
+    @MockBean
+    private CurrExServiceECBConnector ecbConnector;
+
+    @MockBean
+    private ICurrExRepository currExRepository;
+
+    @MockBean
+    private CurrExApplicationInitializer currExApplicationInitializer;
+
 
     private MockMvc mockMvc;
-
 
     @Before
     public void setup() throws Exception {
@@ -51,7 +63,36 @@ public class CurrExServiceECBImplTest {
 
     @Test
     public void testFetchAndStoreExchangeRateInformation() throws Exception {
+        List<CurrExRateResource> fakeNewResources = new ArrayList<CurrExRateResource>();
+        fakeNewResources.add(new CurrExRateResource("1.2","USD","20170512"));
+        fakeNewResources.add(new CurrExRateResource("1.3","JPY","20170512"));
+        fakeNewResources.add(new CurrExRateResource("1.4","USD","20170513"));
+        fakeNewResources.add(new CurrExRateResource("1.5","JPY","20170513"));
+        given(ecbConnector.fetchCurrExRateResources()).
+                willReturn(fakeNewResources);
+        currExService.fetchAndStoreExchangeRateInformation();
+        verify(currExRepository, times(1)).deleteAll();
+        verify(currExRepository, times(1)).addOverwriting("1.2","USD","20170512");
+        verify(currExRepository, times(1)).addOverwriting("1.3","JPY","20170512");
+        verify(currExRepository, times(1)).addOverwriting("1.4","USD","20170513");
+        verify(currExRepository, times(1)).addOverwriting("1.5","JPY","20170513");
+
     }
+
+    @Test
+    public void testFetchAndStoreExchangeRateInformationEmptyResources() throws Exception {
+        List<CurrExRateResource> fakeNewResources = new ArrayList<CurrExRateResource>();
+        given(ecbConnector.fetchCurrExRateResources()).
+                willReturn(fakeNewResources);
+        try {
+            currExService.fetchAndStoreExchangeRateInformation();
+        } catch(Exception e) {
+            verify(currExRepository, times(0)).deleteAll();
+            return;
+        }
+        Assert.assertTrue(false);
+    }
+
 
     @Test
     public void testGetExchangeRateBasedOnEuroForCurrencyAtDate() throws Exception {
@@ -63,9 +104,9 @@ public class CurrExServiceECBImplTest {
                 willReturn("20170411");
         CurrExRateResource resource =
                 currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "20170511");
-        Assert.assertTrue(resource.getCurrencyCode() == "USD");
-        Assert.assertTrue(resource.getExchangeRate() == "1.086");
-        Assert.assertTrue(resource.getExchangeRateDate() == "20170511");
+        Assert.assertTrue(Objects.equals(resource.getCurrencyCode(), "USD"));
+        Assert.assertTrue(Objects.equals(resource.getExchangeRate(), "1.086"));
+        Assert.assertTrue(Objects.equals(resource.getExchangeRateDate(), "20170511"));
     }
 
     @Test
