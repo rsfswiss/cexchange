@@ -5,8 +5,14 @@ import com.company.sample.exchange.domain.ICurrExRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 /**
  * Implementation of the rate exchange service contract,
@@ -26,6 +32,9 @@ public class CurrExServiceECBImpl implements ICurrExService {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
+    @Value("${currex.service.ecb.service.date.pattern}")
+    private String dateFormat;
+
     @Autowired
     private ICurrExRepository currExRepository;
 
@@ -43,20 +52,53 @@ public class CurrExServiceECBImpl implements ICurrExService {
         log.debug("############################ fetchAndStoreExchangeRateInformation executed  ############################ ");
     }
 
-    /**
-     *
-     * @param currencyCode
-     * @param chgRateDate
-     * @return the exchange rate in
-     */
+
     @Override
-    public CurrExRateResource getExchangeRateBasedOnEuroForCurrencyAtDate(String currencyCode, String chgRateDate) throws CurrExServiceException {
-        //if(!validate(currencyCode)) throw new CurrExServiceCurrencyIncorrectException();
-        //if(!validate(chgRateDate)) throw new CurrExServiceDateNotRecognizedException();
-        CurrExRateResource foundResource = currExRepository.find(currencyCode, chgRateDate);
-        if(foundResource == null) throw new CurrExServiceDataNotFoundException();
-        //if(!validate(foundResource.getExchangeRate())) throw new CurrExServiceCurrencyNotAvailableException();
-        return foundResource;
+    public CurrExRateResource getExchangeRateBasedOnEuroForCurrencyAtDate(String currencyCode, String dateStr) throws CurrExServiceException {
+        validateParameters(currencyCode, dateStr);
+        String exChangeRate = currExRepository.findByCurrencyCodeAndDate(currencyCode, dateStr);
+        validateResult(exChangeRate);
+        return new CurrExRateResource(exChangeRate, currencyCode, dateStr);
+    }
+
+    //this should be moved to a Validator in the future
+    private void validateParameters(String currencyCode, String dateStr) throws CurrExServiceException{
+
+        //to improve validation, validate against a list of ISO currency codes
+        if(StringUtils.isEmpty(currencyCode)
+                || currencyCode.length() !=3
+                || !Character.isLetter(currencyCode.charAt(0))
+                || !Character.isLetter(currencyCode.charAt(1))
+                || !Character.isLetter(currencyCode.charAt(2)))
+            throw new CurrExServiceCurrencyIncorrectException();
+
+        try {
+            DateTimeFormatter formatter =
+                    DateTimeFormatter.ofPattern(dateFormat);
+            LocalDate.parse(dateStr, formatter);
+        }
+        catch (DateTimeParseException exc) {
+            throw new CurrExServiceDateNotRecognizedException();
+        }
+
+        if(dateStr.compareTo(currExRepository.getMaxAvailableDateStr()) > 0)
+            throw new CurrExServiceDateTooNewException();
+
+        if(dateStr.compareTo(currExRepository.getMinAvailableDateStr()) < 0)
+            throw new CurrExServiceDateTooOldException();
+
+    }
+
+    private void validateResult(String exChangeRate) throws CurrExServiceException{
+
+        if(StringUtils.isEmpty(exChangeRate)) throw new CurrExServiceDataNotFoundException();
+
+        try {
+            Double.parseDouble(exChangeRate);
+        }
+        catch (NumberFormatException e) {
+            throw new CurrExServiceCurrencyNotAvailableException();
+        }
     }
 
 }

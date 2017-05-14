@@ -14,5 +14,5 @@ public interface ICurrExService {
 
     void fetchAndStoreExchangeRateInformation() throws Exception;
 
-    CurrExRateResource getExchangeRateBasedOnEuroForCurrencyAtDate(String currencyCode, String chgRateDate) throws CurrExServiceException;
+    CurrExRateResource getExchangeRateBasedOnEuroForCurrencyAtDate(String currencyCode, String dateStr) throws CurrExServiceException;
 }

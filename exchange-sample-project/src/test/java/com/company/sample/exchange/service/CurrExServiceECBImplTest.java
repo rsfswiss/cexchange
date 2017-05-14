@@ -56,9 +56,14 @@ public class CurrExServiceECBImplTest {
 
     @Test
     public void testGetExchangeRateBasedOnEuroForCurrencyAtDate() throws Exception {
-        given(currExRepository.find("USD","20170511")).
-                willReturn(new CurrExRateResource("1.086","USD","20170511"));
-        CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "20170511");
+        given(currExRepository.findByCurrencyCodeAndDate("USD","20170511")).
+                willReturn("1.086");
+        given(currExRepository.getMaxAvailableDateStr()).
+                willReturn("20170511");
+        given(currExRepository.getMinAvailableDateStr()).
+                willReturn("20170411");
+        CurrExRateResource resource =
+                currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "20170511");
         Assert.assertTrue(resource.getCurrencyCode() == "USD");
         Assert.assertTrue(resource.getExchangeRate() == "1.086");
         Assert.assertTrue(resource.getExchangeRateDate() == "20170511");
@@ -66,10 +71,14 @@ public class CurrExServiceECBImplTest {
 
     @Test
     public void testGetExchangeRateBasedOnEuroForCurrencyAtDateNotFound() {
-        given(currExRepository.find("USD","20170511")).
+        given(currExRepository.findByCurrencyCodeAndDate("USD","20170511")).
                 willReturn(null);
+        given(currExRepository.getMaxAvailableDateStr()).
+                willReturn("20170511");
+        given(currExRepository.getMinAvailableDateStr()).
+                willReturn("20170411");
         try {
-            CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "20170511");
+            currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "20170511");
         } catch(Exception ex) {
             Assert.assertTrue(ex instanceof CurrExServiceDataNotFoundException);
         }
@@ -77,8 +86,12 @@ public class CurrExServiceECBImplTest {
 
     @Test
     public void testGetExchangeRateBasedOnEuroForCurrencyAtDateCurrencyIncorrect() {
+        given(currExRepository.getMaxAvailableDateStr()).
+                willReturn("20170511");
+        given(currExRepository.getMinAvailableDateStr()).
+                willReturn("20170411");
         try {
-            CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("#", "20170511");
+            currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("#", "20170511");
         } catch(Exception ex) {
             Assert.assertTrue(ex instanceof CurrExServiceCurrencyIncorrectException);
         }
@@ -86,10 +99,14 @@ public class CurrExServiceECBImplTest {
 
     @Test
     public void testGetExchangeRateBasedOnEuroForCurrencyAtDateCurrencyNotAvailable() {
-        given(currExRepository.find("USD","20170511")).
-                willReturn(new CurrExRateResource("NA","USD","20170511"));
+        given(currExRepository.findByCurrencyCodeAndDate("USD","20170511")).
+                willReturn("NA");
+        given(currExRepository.getMaxAvailableDateStr()).
+                willReturn("20170511");
+        given(currExRepository.getMinAvailableDateStr()).
+                willReturn("20170411");
         try {
-            CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "20170511");
+            currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "20170511");
         } catch(Exception ex) {
             Assert.assertTrue(ex instanceof CurrExServiceCurrencyNotAvailableException);
         }
@@ -97,9 +114,12 @@ public class CurrExServiceECBImplTest {
 
     @Test
     public void testGetExchangeRateBasedOnEuroForCurrencyAtDateNotRecognized() {
-
+        given(currExRepository.getMaxAvailableDateStr()).
+                willReturn("20170511");
+        given(currExRepository.getMinAvailableDateStr()).
+                willReturn("20170411");
         try {
-            CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "01-01-2017");
+            currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "01-01-2017");
         } catch(Exception ex) {
             Assert.assertTrue(ex instanceof CurrExServiceDateNotRecognizedException);
         }
@@ -107,9 +127,12 @@ public class CurrExServiceECBImplTest {
 
     @Test
     public void testGetExchangeRateBasedOnEuroForCurrencyAtDateTooNew() {
-
+        given(currExRepository.getMaxAvailableDateStr()).
+                willReturn("20170511");
+        given(currExRepository.getMinAvailableDateStr()).
+                willReturn("20170411");
         try {
-            CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "30000101");
+            currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "30000101");
         } catch(Exception ex) {
             Assert.assertTrue(ex instanceof CurrExServiceDateTooNewException);
         }

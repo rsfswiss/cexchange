@@ -101,7 +101,7 @@ public class CurrExRestControllerTest {
 
     @Test
     public void testGetEurExchgRateForISO8601CurrencyDoesNotExist() throws Exception {
-        given(currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("ERR","20170511")).
+        given(currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("ER","20170511")).
                 willThrow(new CurrExServiceCurrencyIncorrectException());
         mockMvc.perform(get("/"+baseUri+"/ERR/20170511")
                 .contentType(contentType))
