@@ -1,18 +1,23 @@
 package com.company.sample.exchange.controller;
 
+import com.company.sample.exchange.domain.CurrExRateResource;
 import com.company.sample.exchange.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.hateoas.mvc.ControllerLinkBuilder;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
+
 /**
- * Rest API for euro currency exchage rates.
+ * Rest API for euro currency exchange rates.
  * Delivers the exchange rate obtained from ECB
  * http://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html#dev
  * The rates are not available for current day and only for the previous 90 days.
@@ -36,7 +41,10 @@ import javax.servlet.http.HttpServletRequest;
  * Produces JSON format responses and accepts only GET requests.
  */
 @RestController
-@RequestMapping(value = "${currex.controller.uri.base}", method = RequestMethod.GET, produces = "application/json")
+//TODO: adding the base uri mapping property currex.controller.uri.base breaks the ControllerLinkBuilder below
+@RequestMapping(value = "eurocurrex",
+        method = RequestMethod.GET,
+        produces = "application/json")
 public class CurrExRestController  {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
@@ -47,13 +55,12 @@ public class CurrExRestController  {
     @Autowired
     private Environment env;
 
-    @RequestMapping("/{currencyCode}/{chgRateDate}")
-    public double exchange(@PathVariable String currencyCode, @PathVariable String chgRateDate) throws Exception
+    @RequestMapping(value = "{currencyCode}/{chgRateDate}", method = RequestMethod.GET, produces = "application/json")
+    public HttpEntity<CurrExRateResource> exchange(@PathVariable String currencyCode, @PathVariable String chgRateDate) throws Exception
     {
-        double exchangeRate;
-        exchangeRate = currExService.getExchangeRateForEuroAtDate(currencyCode, chgRateDate);
-        //TODO verify default spring double formatting
-        return exchangeRate;
+        CurrExRateResource exchangeRateResource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate(currencyCode, chgRateDate);
+        exchangeRateResource.add(ControllerLinkBuilder.linkTo(methodOn(this.getClass()).exchange(currencyCode, chgRateDate)).withSelfRel());
+        return new ResponseEntity<CurrExRateResource>(exchangeRateResource, HttpStatus.OK);
     }
 
     @ExceptionHandler({CurrExServiceException.class, Exception.class})

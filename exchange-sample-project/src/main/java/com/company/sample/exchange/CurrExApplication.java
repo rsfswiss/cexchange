@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+//TODO: retry strategy for the ECB scheduler, add json hypermedia
 @SpringBootApplication
 @EnableScheduling
 public class CurrExApplication {

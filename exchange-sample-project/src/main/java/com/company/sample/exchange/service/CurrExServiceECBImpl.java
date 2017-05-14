@@ -1,11 +1,12 @@
 package com.company.sample.exchange.service;
 
+import com.company.sample.exchange.domain.CurrExRateResource;
+import com.company.sample.exchange.domain.ICurrExRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
 
 /**
  * Implementation of the rate exchange service contract,
@@ -25,7 +26,8 @@ public class CurrExServiceECBImpl implements ICurrExService {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    private HashMap<String,String> exchangeRatesRepository = new HashMap<>();
+    @Autowired
+    private ICurrExRepository currExRepository;
 
     /**
      * From:
@@ -48,9 +50,9 @@ public class CurrExServiceECBImpl implements ICurrExService {
      * @return the exchange rate in
      */
     @Override
-    public double getExchangeRateForEuroAtDate(String currencyCode, String chgRateDate) throws CurrExServiceException {
+    public CurrExRateResource getExchangeRateBasedOnEuroForCurrencyAtDate(String currencyCode, String chgRateDate) throws CurrExServiceException {
         //WIP
-        return 0;
+        return new CurrExRateResource("0",currencyCode, chgRateDate);
     }
 
 }

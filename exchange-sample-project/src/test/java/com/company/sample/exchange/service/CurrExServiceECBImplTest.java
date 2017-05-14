@@ -5,29 +5,29 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.scheduling.TriggerContext;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.context.web.WebAppConfiguration;
 
 import java.time.ZonedDateTime;
 import java.util.Date;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = CurrExApplication.class)
-@WebAppConfiguration
+@AutoConfigureMockMvc
 public class CurrExServiceECBImplTest {
 
-    @Value("${currex.service.ecb.scheduler}")
+    @Value("${currex.service.ecb.scheduler.cron}")
     private String cronExpression;
 
     @Test
-    public void fetchAndStoreExchangeRateInformation() throws Exception {
+    public void testFetchAndStoreExchangeRateInformation() throws Exception {
     }
 
     @Test
-    public void getExchangeRateForEuroAtDate() throws Exception {
+    public void testgetExchangeRateBasedOnEuroForCurrencyAtDate() throws Exception {
     }
 
     @Test
