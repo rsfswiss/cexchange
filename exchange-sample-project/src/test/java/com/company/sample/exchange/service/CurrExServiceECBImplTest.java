@@ -1,18 +1,28 @@
 package com.company.sample.exchange.service;
 
 import com.company.sample.exchange.CurrExApplication;
+import com.company.sample.exchange.domain.CurrExRateResource;
+import com.company.sample.exchange.domain.ICurrExRepository;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.scheduling.TriggerContext;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.time.ZonedDateTime;
 import java.util.Date;
+
+import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = CurrExApplication.class)
@@ -22,12 +32,87 @@ public class CurrExServiceECBImplTest {
     @Value("${currex.service.ecb.scheduler.cron}")
     private String cronExpression;
 
+    @MockBean
+    private ICurrExRepository currExRepository;
+
+    @Autowired
+    private WebApplicationContext webApplicationContext;
+
+    @Autowired
+    private ICurrExService currExService;
+
+
+    private MockMvc mockMvc;
+
+
+    @Before
+    public void setup() throws Exception {
+        this.mockMvc = webAppContextSetup(webApplicationContext).build();
+    }
+
     @Test
     public void testFetchAndStoreExchangeRateInformation() throws Exception {
     }
 
     @Test
-    public void testgetExchangeRateBasedOnEuroForCurrencyAtDate() throws Exception {
+    public void testGetExchangeRateBasedOnEuroForCurrencyAtDate() throws Exception {
+        given(currExRepository.find("USD","20170511")).
+                willReturn(new CurrExRateResource("1.086","USD","20170511"));
+        CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "20170511");
+        Assert.assertTrue(resource.getCurrencyCode() == "USD");
+        Assert.assertTrue(resource.getExchangeRate() == "1.086");
+        Assert.assertTrue(resource.getExchangeRateDate() == "20170511");
+    }
+
+    @Test
+    public void testGetExchangeRateBasedOnEuroForCurrencyAtDateNotFound() {
+        given(currExRepository.find("USD","20170511")).
+                willReturn(null);
+        try {
+            CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "20170511");
+        } catch(Exception ex) {
+            Assert.assertTrue(ex instanceof CurrExServiceDataNotFoundException);
+        }
+    }
+
+    @Test
+    public void testGetExchangeRateBasedOnEuroForCurrencyAtDateCurrencyIncorrect() {
+        try {
+            CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("#", "20170511");
+        } catch(Exception ex) {
+            Assert.assertTrue(ex instanceof CurrExServiceCurrencyIncorrectException);
+        }
+    }
+
+    @Test
+    public void testGetExchangeRateBasedOnEuroForCurrencyAtDateCurrencyNotAvailable() {
+        given(currExRepository.find("USD","20170511")).
+                willReturn(new CurrExRateResource("NA","USD","20170511"));
+        try {
+            CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "20170511");
+        } catch(Exception ex) {
+            Assert.assertTrue(ex instanceof CurrExServiceCurrencyNotAvailableException);
+        }
+    }
+
+    @Test
+    public void testGetExchangeRateBasedOnEuroForCurrencyAtDateNotRecognized() {
+
+        try {
+            CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "01-01-2017");
+        } catch(Exception ex) {
+            Assert.assertTrue(ex instanceof CurrExServiceDateNotRecognizedException);
+        }
+    }
+
+    @Test
+    public void testGetExchangeRateBasedOnEuroForCurrencyAtDateTooNew() {
+
+        try {
+            CurrExRateResource resource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate("USD", "30000101");
+        } catch(Exception ex) {
+            Assert.assertTrue(ex instanceof CurrExServiceDateTooNewException);
+        }
     }
 
     @Test

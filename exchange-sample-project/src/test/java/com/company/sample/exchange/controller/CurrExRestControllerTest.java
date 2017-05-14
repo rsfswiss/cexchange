@@ -58,7 +58,7 @@ public class CurrExRestControllerTest {
     @Before
     public void setup() throws Exception {
         this.mockMvc = webAppContextSetup(webApplicationContext).build();
-        Mockito.doThrow(new Exception()).doNothing().when(currExService).fetchAndStoreExchangeRateInformation();
+        Mockito.doNothing().when(currExService).fetchAndStoreExchangeRateInformation();
     }
 
     @Test

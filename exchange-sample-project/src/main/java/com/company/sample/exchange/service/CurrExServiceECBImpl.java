@@ -51,8 +51,12 @@ public class CurrExServiceECBImpl implements ICurrExService {
      */
     @Override
     public CurrExRateResource getExchangeRateBasedOnEuroForCurrencyAtDate(String currencyCode, String chgRateDate) throws CurrExServiceException {
-        //WIP
-        return new CurrExRateResource("0",currencyCode, chgRateDate);
+        //if(!validate(currencyCode)) throw new CurrExServiceCurrencyIncorrectException();
+        //if(!validate(chgRateDate)) throw new CurrExServiceDateNotRecognizedException();
+        CurrExRateResource foundResource = currExRepository.find(currencyCode, chgRateDate);
+        if(foundResource == null) throw new CurrExServiceDataNotFoundException();
+        //if(!validate(foundResource.getExchangeRate())) throw new CurrExServiceCurrencyNotAvailableException();
+        return foundResource;
     }
 
 }
