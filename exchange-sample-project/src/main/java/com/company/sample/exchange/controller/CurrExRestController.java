@@ -1,7 +1,7 @@
 package com.company.sample.exchange.controller;
 
 import com.company.sample.exchange.service.CurrExRateResource;
-import com.company.sample.exchange.service.*;
+import com.company.sample.exchange.service.ICurrExService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +10,10 @@ import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
@@ -41,10 +42,6 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
  * Produces JSON format responses and accepts only GET requests.
  */
 @RestController
-//TODO: adding the base uri mapping property currex.controller.uri.base breaks the ControllerLinkBuilder below
-@RequestMapping(value = "eurocurrex",
-        method = RequestMethod.GET,
-        produces = "application/json")
 public class CurrExRestController  {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
@@ -62,55 +59,5 @@ public class CurrExRestController  {
         exchangeRateResource.add(ControllerLinkBuilder.linkTo(methodOn(this.getClass()).exchange(currencyCode, chgRateDate)).withSelfRel());
         return new ResponseEntity<CurrExRateResource>(exchangeRateResource, HttpStatus.OK);
     }
-
-    @ExceptionHandler({CurrExServiceException.class, Exception.class})
-    public ResponseEntity<String> unDeterminedCurrExException(HttpServletRequest req, Exception e)
-    {
-        String error = env.getProperty("currex.controller.message.undetermined");
-        return new ResponseEntity<String>(error, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @ExceptionHandler(CurrExServiceCurrencyNotAvailableException.class)
-    public ResponseEntity<String> currExServiceCurrencyNotAvailableException(HttpServletRequest req, Exception e)
-    {
-        String error = env.getProperty("currex.controller.message.currency.na");
-        return new ResponseEntity<String>(error, HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(CurrExServiceDataNotFoundException.class)
-    public ResponseEntity<String> currExServiceDataNotFoundException(HttpServletRequest req, Exception e)
-    {
-        String error = env.getProperty("currex.controller.message.undetermined");
-        return new ResponseEntity<String>(error, HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(CurrExServiceCurrencyIncorrectException.class)
-    public ResponseEntity<String> currExServiceCurrencyIncorrectException(HttpServletRequest req, Exception e)
-    {
-        String error = env.getProperty("currex.controller.message.currency.incorrect");
-        return new ResponseEntity<String>(error, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(CurrExServiceDateNotRecognizedException.class)
-    public ResponseEntity<String> currExServiceDateNotRecognizedException(HttpServletRequest req, Exception e)
-    {
-        String error = env.getProperty("currex.controller.message.date.incorrect");
-        return new ResponseEntity<String>(error, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(CurrExServiceDateTooNewException.class)
-    public ResponseEntity<String> currExServiceDateTooNewException(HttpServletRequest req, Exception e)
-    {
-        String error = env.getProperty("currex.controller.message.date.too.new");
-        return new ResponseEntity<String>(error, HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(CurrExServiceDateTooOldException.class)
-    public ResponseEntity<String> currExServiceDateTooOldException(HttpServletRequest req, Exception e)
-    {
-        String error = env.getProperty("currex.controller.message.date.too.old");
-        return new ResponseEntity<String>(error, HttpStatus.NOT_FOUND);
-    }
-
 
 }

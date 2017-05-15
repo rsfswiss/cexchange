@@ -6,11 +6,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,15 +45,66 @@ public class CurrExServiceECBConnector implements ICurrExServiceConnector{
     @Value("${currex.connector.ecb.endpoint}")
     private String endPoint;
 
+    @Value("${currex.service.ecb.service.date.pattern.repository}")
+    private String dateRepositoryFormat;
+
+    @Value("${currex.service.ecb.service.date.pattern.ecb}")
+    private String dateECBFormat;
+
 
     public List<CurrExRateResource> fetchCurrExRateResources() throws Exception {
         String xmlContent = fetchXmlFeed();
         return deSerializeFeed(xmlContent);
     }
 
-    protected List<CurrExRateResource> deSerializeFeed(String xmlContent) {
-        //WIP
-        return new ArrayList<CurrExRateResource>();
+    //ECB xml has three nested 'Cube' tags!!!
+    protected List<CurrExRateResource> deSerializeFeed(String xmlContent) throws Exception {
+        List<CurrExRateResource> resultResources = new ArrayList<CurrExRateResource>();
+
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+
+        DocumentBuilder builder;
+        Document doc = null;
+        try {
+            builder = factory.newDocumentBuilder();
+            doc = builder.parse(new InputSource(new StringReader(xmlContent)));
+            XPathFactory xpathFactory = XPathFactory.newInstance();
+            XPath xpath = xpathFactory.newXPath();
+            //e.g. <Cube><Cube time="2017-05-12"><Cube currency="USD" rate="1.0876"/>
+            //skipping the namespace problem by using local-name
+            String expression = "/*[local-name()='Envelope']/*[local-name()='Cube']/*[@time]";
+            NodeList datesNodeList = (NodeList) xpath.compile(expression).evaluate(doc, XPathConstants.NODESET);
+            DateTimeFormatter ecbFormatter =
+                    DateTimeFormatter.ofPattern(dateECBFormat);
+            DateTimeFormatter repositoryFormatter =
+                    DateTimeFormatter.ofPattern(dateRepositoryFormat);
+            for(int i = 0; i < datesNodeList.getLength(); i++) {
+                try {
+                    Node cubeTimeNode = datesNodeList.item(i);
+                    String date = cubeTimeNode.getAttributes().getNamedItem("time").getNodeValue();
+                    //comes as yyyy-MM-dd
+                    LocalDate localDate = LocalDate.parse(date, ecbFormatter);
+                    //we want yyyyMMdd
+                    date = localDate.format(repositoryFormatter);
+                    //exchange rates for this day
+                    NodeList ratesNodeList = cubeTimeNode.getChildNodes();
+                    for (int j = 0; j < ratesNodeList.getLength(); j++) {
+                        Node cubeRateNode = ratesNodeList.item(j);
+                        String currencyCode = cubeRateNode.getAttributes().getNamedItem("currency").getNodeValue();
+                        String exRate = cubeRateNode.getAttributes().getNamedItem("rate").getNodeValue();
+                        resultResources.add(new CurrExRateResource(exRate, currencyCode, date));
+                    }
+                } catch(Exception ex)
+                {
+                    log.warn("Error found parsing data from ecb. ", ex);
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Failure parsing data from ecb. ", e);
+            throw e;
+        }
+        return resultResources;
     }
 
     protected String fetchXmlFeed() throws Exception {

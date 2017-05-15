@@ -34,7 +34,7 @@ public class CurrExServiceECBImpl implements ICurrExService {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    @Value("${currex.service.ecb.service.date.pattern}")
+    @Value("${currex.service.ecb.service.date.pattern.repository}")
     private String dateFormat;
 
     @Autowired
@@ -59,7 +59,9 @@ public class CurrExServiceECBImpl implements ICurrExService {
         currExRepository.deleteAll();
         resourcesResult.forEach(r ->
                 currExRepository.addOverwriting(r.getExchangeRate(),r.getCurrencyCode(),r.getExchangeRateDate()));
-        log.debug("fetchAndStoreExchangeRateInformation executed successfully");
+        log.debug("fetchAndStoreExchangeRateInformation executed successfully, added " + resourcesResult.size() + " rates from ECB.");
+        log.debug(" max available date is: " + currExRepository.getMaxAvailableDateStr());
+        log.debug(" min available date is: " + currExRepository.getMinAvailableDateStr());
     }
 
 
