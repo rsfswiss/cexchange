@@ -1,5 +1,7 @@
 package com.company.sample.exchange.service;
 
+import java.util.List;
+
 /**
  * Service definition for exchange rate data.
  * Provides method definitions to obtain and persist
@@ -13,4 +15,8 @@ public interface ICurrExService {
     void fetchAndStoreExchangeRateInformation() throws Exception;
 
     CurrExRateResource getExchangeRateBasedOnEuroForCurrencyAtDate(String currencyCode, String dateStr) throws CurrExServiceException;
+
+    List<CurrExRateResource> getAllExchangeRatesBasedOnEuroForCurrency(String currencyCode) throws CurrExServiceException;
+
+    List<CurrExCurrencyCodeResource> getAllCurrencyCodes();
 }

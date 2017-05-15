@@ -1,8 +1,11 @@
 package com.company.sample.exchange.domain;
 
+import com.company.sample.exchange.service.CurrExRateResource;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Wraps a Hasmap as a very simple <key,value> pair
@@ -21,6 +24,9 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
     //value is the exchange rate, e.g. 125.6
     private HashMap<String,String> inMemoryContainerMap = new HashMap<>();
 
+    //conveniently keeps track of all different currency codes
+    private ArrayList<String> allCurrencyCodes = new ArrayList<>();
+
     //conveniently keeping track of the oldest inserted date
     private String minAvailableDateStr = "00010101";
 
@@ -31,12 +37,14 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
     public synchronized void deleteAll() {
         inMemoryContainerMap.clear();
         resetMaxAndMinAvailableDateStr();
+        allCurrencyCodes.clear();
     }
 
     @Override
     public synchronized void addOverwriting(String exchangeRate, String currencyCode, String dateStr) {
         updateMaxAndMinAvailableDateStr(dateStr);
         inMemoryContainerMap.put(generateKey(currencyCode, dateStr),exchangeRate);
+        if(!allCurrencyCodes.contains(currencyCode.toUpperCase())) allCurrencyCodes.add(currencyCode.toUpperCase());
     }
 
     /**
@@ -62,6 +70,24 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
     @Override
     public String getMinAvailableDateStr() {
         return minAvailableDateStr;
+    }
+
+    @Override
+    public List<CurrExRateResource> getAllExchangeRatesBasedOnEuroForCurrency(String currencyCode) {
+        //convenience ugly implementation...
+        List<CurrExRateResource> resources = new ArrayList<>();
+        inMemoryContainerMap.keySet().stream().
+                filter(k -> k.startsWith(currencyCode.toUpperCase())). //currency code is the first part oif the key
+                forEach(k -> resources.add(new CurrExRateResource(inMemoryContainerMap.get(k), //the value is the exchg rate
+                                                currencyCode.toUpperCase(),
+                                                //the date is the second part of the key
+                                                k.replace(currencyCode.toUpperCase() + "#",""))));
+        return resources;
+    }
+
+    @Override
+    public List<String> getAllCurrencyCodes() {
+        return allCurrencyCodes;
     }
 
     private String generateKey(String currencyCode, String dateStr) {

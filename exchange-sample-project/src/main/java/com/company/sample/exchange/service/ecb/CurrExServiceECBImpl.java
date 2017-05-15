@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of the rate exchange service contract,
@@ -64,7 +65,19 @@ public class CurrExServiceECBImpl implements ICurrExService {
         log.debug(" min available date is: " + currExRepository.getMinAvailableDateStr());
     }
 
-
+    /**
+     * Given a currency code, e.g. USD, and a date, e.g. 20170531
+     * uses the injected repository imlementation to deliver
+     * the exchange rate.
+     *
+     * Performs validation of both parameters and the result.
+     *
+     * @param currencyCode the currency in iso three char format
+     * @param dateStr the date in iso yyyyMMdd format
+     * @return the exchange rate if found in the repository and is
+     * parseable to a valid java Double, exception otherwise
+     * @throws CurrExServiceException as mapped in CurrExRestGlobalExceptionHandler
+     */
     @Override
     public CurrExRateResource getExchangeRateBasedOnEuroForCurrencyAtDate(String currencyCode, String dateStr) throws CurrExServiceException {
         validateParameters(currencyCode, dateStr);
@@ -73,9 +86,20 @@ public class CurrExServiceECBImpl implements ICurrExService {
         return new CurrExRateResource(exChangeRate, currencyCode, dateStr);
     }
 
-    //this should be moved to a Validator in the future
-    private void validateParameters(String currencyCode, String dateStr) throws CurrExServiceException{
+    @Override
+    public List<CurrExRateResource> getAllExchangeRatesBasedOnEuroForCurrency(String currencyCode) throws CurrExServiceException {
+        validateCurrencyCode(currencyCode);
+        return currExRepository.getAllExchangeRatesBasedOnEuroForCurrency(currencyCode);
+    }
 
+    @Override
+    public List<CurrExCurrencyCodeResource> getAllCurrencyCodes() {
+        return currExRepository.getAllCurrencyCodes().stream().
+                map(s -> new CurrExCurrencyCodeResource(s)).collect(Collectors.toList());
+    }
+
+    //this should be moved to a Validator in the future
+    private void validateCurrencyCode(String currencyCode) throws CurrExServiceException{
         //to improve validation, validate against a list of ISO currency codes
         if(StringUtils.isEmpty(currencyCode)
                 || currencyCode.length() !=3
@@ -83,6 +107,12 @@ public class CurrExServiceECBImpl implements ICurrExService {
                 || !Character.isLetter(currencyCode.charAt(1))
                 || !Character.isLetter(currencyCode.charAt(2)))
             throw new CurrExServiceCurrencyIncorrectException();
+    }
+
+    //this should be moved to a Validator in the future
+    private void validateParameters(String currencyCode, String dateStr) throws CurrExServiceException{
+
+        validateCurrencyCode( currencyCode);
 
         try {
             DateTimeFormatter formatter =

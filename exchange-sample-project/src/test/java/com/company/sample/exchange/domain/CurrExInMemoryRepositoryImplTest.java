@@ -9,6 +9,45 @@ import java.util.Objects;
 public class CurrExInMemoryRepositoryImplTest {
 
     @Test
+    public void getAllExchangeRatesBasedOnEuroForCurrency() throws Exception {
+        CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
+        repoImpl.addOverwriting("123.6","USD","20100911");
+        repoImpl.addOverwriting("124.9","USD","20100912");
+        org.junit.Assert.assertFalse(
+                StringUtils.isEmpty(repoImpl.getAllExchangeRatesBasedOnEuroForCurrency("USD")));
+        org.junit.Assert.assertTrue(
+                repoImpl.getAllExchangeRatesBasedOnEuroForCurrency("USD").size() == 2);
+        org.junit.Assert.assertTrue(
+                repoImpl.getAllExchangeRatesBasedOnEuroForCurrency("USD").stream().
+                        anyMatch(c -> c.getExchangeRate().equals("123.6") &&
+                        c.getCurrencyCode().equals("USD") &&
+                        c.getExchangeRateDate().equals("20100911")));
+        org.junit.Assert.assertTrue(
+                repoImpl.getAllExchangeRatesBasedOnEuroForCurrency("USD").stream().
+                        anyMatch(c -> c.getExchangeRate().equals("124.9") &&
+                                c.getCurrencyCode().equals("USD") &&
+                                c.getExchangeRateDate().equals("20100912")));
+    }
+
+    @Test
+    public void getAllCurrencyCodes() throws Exception {
+        CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
+        repoImpl.addOverwriting("123.6","USD","20100911");
+        repoImpl.addOverwriting("124.9","USD","20100912");
+        repoImpl.addOverwriting("124.1","JPY","20100912");
+        org.junit.Assert.assertFalse(
+                StringUtils.isEmpty(repoImpl.getAllCurrencyCodes()));
+        org.junit.Assert.assertTrue(
+                repoImpl.getAllCurrencyCodes().size() == 2);
+        org.junit.Assert.assertTrue(
+                repoImpl.getAllCurrencyCodes().stream().
+                        anyMatch(c -> c.equals("USD")));
+        org.junit.Assert.assertTrue(
+                repoImpl.getAllCurrencyCodes().stream().
+                        anyMatch(c -> c.equals("JPY")));
+    }
+
+    @Test
     public void deleteAll() throws Exception {
         CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
         repoImpl.addOverwriting("123.6","USD","20100911");

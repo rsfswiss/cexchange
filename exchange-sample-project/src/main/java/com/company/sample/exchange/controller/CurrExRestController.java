@@ -1,5 +1,6 @@
 package com.company.sample.exchange.controller;
 
+import com.company.sample.exchange.service.CurrExCurrencyCodeResource;
 import com.company.sample.exchange.service.CurrExRateResource;
 import com.company.sample.exchange.service.ICurrExService;
 import org.slf4j.Logger;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
@@ -52,12 +55,42 @@ public class CurrExRestController  {
     @Autowired
     private Environment env;
 
-    @RequestMapping(value = "{currencyCode}/{chgRateDate}", method = RequestMethod.GET, produces = "application/json")
-    public HttpEntity<CurrExRateResource> exchange(@PathVariable String currencyCode, @PathVariable String chgRateDate) throws Exception
+    @RequestMapping(value = "/{currencyCode}/{chgRateDate}", method = RequestMethod.GET, produces = "application/json")
+    public HttpEntity<CurrExRateResource> getExchangeRateByCurrencyAndDate(@PathVariable String currencyCode,
+                                                                           @PathVariable String chgRateDate) throws Exception
     {
-        CurrExRateResource exchangeRateResource = currExService.getExchangeRateBasedOnEuroForCurrencyAtDate(currencyCode, chgRateDate);
-        exchangeRateResource.add(ControllerLinkBuilder.linkTo(methodOn(this.getClass()).exchange(currencyCode, chgRateDate)).withSelfRel());
+        CurrExRateResource exchangeRateResource = currExService.
+                getExchangeRateBasedOnEuroForCurrencyAtDate(currencyCode, chgRateDate);
+        exchangeRateResource.add(ControllerLinkBuilder.linkTo(methodOn(this.getClass()).
+                getExchangeRateByCurrencyAndDate(currencyCode, chgRateDate)).withSelfRel());
         return new ResponseEntity<CurrExRateResource>(exchangeRateResource, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/{currencyCode}", method = RequestMethod.GET, produces = "application/json")
+    public HttpEntity<List<CurrExRateResource>> getAllExchangeRatesForCurrency(@PathVariable String currencyCode) throws Exception
+    {
+        List<CurrExRateResource> exchangeRateResources = currExService.getAllExchangeRatesBasedOnEuroForCurrency(currencyCode);
+        for(CurrExRateResource resource : exchangeRateResources){
+            resource.add(ControllerLinkBuilder.
+                          linkTo(methodOn(this.getClass()).
+                                  getExchangeRateByCurrencyAndDate(resource.getCurrencyCode(),
+                                          resource.getExchangeRateDate())).withRel(currencyCode+"/"+resource.getExchangeRateDate()));
+        }
+        ResponseEntity<List<CurrExRateResource>> responseEntity =
+                new ResponseEntity<List<CurrExRateResource>>(exchangeRateResources, HttpStatus.OK);
+        return responseEntity;
+    }
+
+    @RequestMapping(value = "/", method = RequestMethod.GET, produces = "application/json")
+    public HttpEntity<List<CurrExCurrencyCodeResource>> getAllCurrencyCodes() throws Exception
+    {
+        List<CurrExCurrencyCodeResource> allCurrencies = currExService.getAllCurrencyCodes();
+        for(CurrExCurrencyCodeResource resource : allCurrencies){
+            resource.add(ControllerLinkBuilder.
+                    linkTo(methodOn(this.getClass()).
+                            getAllExchangeRatesForCurrency(resource.getCurrencyCode())).withRel(resource.getCurrencyCode()));
+        }
+        return new ResponseEntity<List<CurrExCurrencyCodeResource>>(allCurrencies, HttpStatus.OK);
     }
 
 }

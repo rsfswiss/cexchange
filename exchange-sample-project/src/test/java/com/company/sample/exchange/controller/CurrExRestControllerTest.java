@@ -3,7 +3,6 @@ package com.company.sample.exchange.controller;
 import com.company.sample.exchange.CurrExApplication;
 import com.company.sample.exchange.service.*;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -20,10 +19,13 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.hamcrest.core.StringEndsWith.endsWith;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
@@ -137,27 +139,41 @@ public class CurrExRestControllerTest {
     }
 
     @Test
-    @Ignore
-    //TODO we do not list all dates at the moment, this error should be detected by Spring REST
-    public void testMissingDate() throws Exception {
-        mockMvc.perform(get("/"+baseUri+"/USD")
-                .contentType(contentType))
-                .andExpect(status().isNotFound())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMsg").
-                        value(env.getProperty("currex.controller.message.resource.not.found")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.status").value("404"));
-    }
-
-    @Test
-    @Ignore
-    //TODO we do not list resources at the moment, this error should be detected by Spring REST
-    public void testMissingURI() throws Exception {
+    //TODO: find a way to test for any json element order
+    public void testGetAllCurrencyCodes() throws Exception {
+        CurrExCurrencyCodeResource usdRes = new CurrExCurrencyCodeResource("USD");
+        CurrExCurrencyCodeResource jpyRes = new CurrExCurrencyCodeResource("JPY");
+        List<CurrExCurrencyCodeResource> allCurrRes =new ArrayList<CurrExCurrencyCodeResource>();
+        allCurrRes.add(usdRes);
+        allCurrRes.add(jpyRes);
+        given(currExService.getAllCurrencyCodes()).willReturn(allCurrRes);
         mockMvc.perform(get("/"+baseUri)
                 .contentType(contentType))
-                .andExpect(status().isNotFound())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMsg").
-                        value(env.getProperty("currex.controller.message.resource.not.found")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.status").value("404"));
+                .andExpect(status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.[0].currencyCode").value("USD"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.[1].currencyCode").value("JPY"));
+    }
+
+
+    @Test
+    //TODO: find a way to test for any json element order
+    public void testGetAllExchangeRatesForCurrency() throws Exception {
+        List<CurrExRateResource> resources = new ArrayList<CurrExRateResource>();
+        resources.add(new CurrExRateResource("1.086","USD","20170511"));
+        resources.add(new CurrExRateResource("1.0867","USD","20170512"));
+        given(currExService.getAllExchangeRatesBasedOnEuroForCurrency("USD")).willReturn(resources);
+
+        mockMvc.perform(get("/"+baseUri+"/USD")
+                .contentType(contentType))
+                .andExpect(status().isOk())
+                .andDo(print())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.[0].currencyCode").value("USD"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.[1].currencyCode").value("USD"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.[0].exchangeRate").value("1.086"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.[1].exchangeRate").value("1.0867"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.[0].exchangeRateDate").value("20170511"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.[1].exchangeRateDate").value("20170512"));
+
     }
 
 }

@@ -1,5 +1,9 @@
 package com.company.sample.exchange.domain;
 
+import com.company.sample.exchange.service.CurrExRateResource;
+
+import java.util.List;
+
 /**
  * Repository definition, allows
  * a total reset of the contents,
@@ -31,4 +35,7 @@ public interface ICurrExRepository {
 
     String getMinAvailableDateStr();
 
+    List<CurrExRateResource> getAllExchangeRatesBasedOnEuroForCurrency(String currencyCode);
+
+    List<String> getAllCurrencyCodes();
 }
