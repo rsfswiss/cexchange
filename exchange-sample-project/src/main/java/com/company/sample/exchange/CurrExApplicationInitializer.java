@@ -1,6 +1,6 @@
 package com.company.sample.exchange;
 
-import com.company.sample.exchange.service.ICurrExService;
+import com.company.sample.exchange.service.ecb.CurrExServiceECBImpl;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -10,10 +10,10 @@ import org.springframework.stereotype.Component;
  * Should not let the application start in case of exception.
  */
 @Component
-public class CurrExApplicationInitializer implements InitializingBean{
+public class CurrExApplicationInitializer implements InitializingBean {
 
     @Autowired
-    private ICurrExService currExService;
+    private CurrExServiceECBImpl currExService;
 
     @Override
     public void afterPropertiesSet() throws Exception {

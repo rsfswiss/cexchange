@@ -1,7 +1,7 @@
 package com.company.sample.exchange.connector.ecb;
 
 import com.company.sample.exchange.connector.ICurrExServiceConnector;
-import com.company.sample.exchange.service.CurrExRateResource;
+import com.company.sample.exchange.domain.ExchangeRate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,18 +26,18 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-;
+
 
 /**
  * Encapsulates http retrieval of the raw ECB resource from:
- *
+ * <p>
  * http://www.ecb.europa.eu/stats/eurofxref/
- *
+ * <p>
  * Will parse the xml and produce a list of CurrExRateResource,
  * or throw an Exception in case of failure.
  */
 @Service
-public class CurrExServiceECBConnector implements ICurrExServiceConnector{
+public class CurrExServiceECBConnector implements ICurrExServiceConnector {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
@@ -52,14 +52,14 @@ public class CurrExServiceECBConnector implements ICurrExServiceConnector{
     private String dateECBFormat;
 
 
-    public List<CurrExRateResource> fetchCurrExRateResources() throws Exception {
+    public List<ExchangeRate> fetchCurrExRateResources() throws Exception {
         String xmlContent = fetchXmlFeed();
         return deSerializeFeed(xmlContent);
     }
 
     //ECB xml has three nested 'Cube' tags!!!
-    protected List<CurrExRateResource> deSerializeFeed(String xmlContent) throws Exception {
-        List<CurrExRateResource> resultResources = new ArrayList<CurrExRateResource>();
+    protected List<ExchangeRate> deSerializeFeed(String xmlContent) throws Exception {
+        List<ExchangeRate> resultResources = new ArrayList<ExchangeRate>();
 
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 
@@ -78,7 +78,7 @@ public class CurrExServiceECBConnector implements ICurrExServiceConnector{
                     DateTimeFormatter.ofPattern(dateECBFormat);
             DateTimeFormatter repositoryFormatter =
                     DateTimeFormatter.ofPattern(dateRepositoryFormat);
-            for(int i = 0; i < datesNodeList.getLength(); i++) {
+            for (int i = 0; i < datesNodeList.getLength(); i++) {
                 try {
                     Node cubeTimeNode = datesNodeList.item(i);
                     String date = cubeTimeNode.getAttributes().getNamedItem("time").getNodeValue();
@@ -92,10 +92,13 @@ public class CurrExServiceECBConnector implements ICurrExServiceConnector{
                         Node cubeRateNode = ratesNodeList.item(j);
                         String currencyCode = cubeRateNode.getAttributes().getNamedItem("currency").getNodeValue();
                         String exRate = cubeRateNode.getAttributes().getNamedItem("rate").getNodeValue();
-                        resultResources.add(new CurrExRateResource(exRate, currencyCode, date));
+                        ExchangeRate rate = new ExchangeRate();
+                        rate.setCurrencyCode(currencyCode);
+                        rate.setExchangeRate(exRate);
+                        rate.setExchangeRateDate(date);
+                        resultResources.add(rate);
                     }
-                } catch(Exception ex)
-                {
+                } catch (Exception ex) {
                     log.warn("Error found parsing data from ecb. ", ex);
                 }
             }
@@ -113,17 +116,17 @@ public class CurrExServiceECBConnector implements ICurrExServiceConnector{
         // By default it is GET request
         con.setRequestMethod("GET");
         int responseCode = con.getResponseCode();
-        try(BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))){
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
             String output;
             StringBuffer response = new StringBuffer();
             while ((output = in.readLine()) != null) {
                 response.append(output);
             }
-            if((responseCode < 200 || responseCode > 299) && responseCode != 304)
-                throw new Exception("HTTP request to " + endPoint +  " failed with response code " +
+            if ((responseCode < 200 || responseCode > 299) && responseCode != 304)
+                throw new Exception("HTTP request to " + endPoint + " failed with response code " +
                         responseCode + " " + response.toString());
             return response.toString();
-        } catch(Exception e){
+        } catch (Exception e) {
             log.error("Failure fetching data from ecb. ", e);
             throw e;
         }

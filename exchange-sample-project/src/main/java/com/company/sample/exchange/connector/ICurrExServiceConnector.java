@@ -1,6 +1,6 @@
 package com.company.sample.exchange.connector;
 
-import com.company.sample.exchange.service.CurrExRateResource;
+import com.company.sample.exchange.domain.ExchangeRate;
 
 import java.util.List;
 
@@ -11,5 +11,5 @@ import java.util.List;
  */
 public interface ICurrExServiceConnector {
 
-    List<CurrExRateResource> fetchCurrExRateResources() throws Exception;
+    List<ExchangeRate> fetchCurrExRateResources() throws Exception;
 }

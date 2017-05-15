@@ -2,7 +2,7 @@ package com.company.sample.exchange.connector.ecb;
 
 import com.company.sample.exchange.CurrExApplication;
 import com.company.sample.exchange.CurrExApplicationInitializer;
-import com.company.sample.exchange.service.CurrExRateResource;
+import com.company.sample.exchange.domain.ExchangeRate;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,7 +58,7 @@ public class CurrExServiceECBConnectorTest {
                 "</Cube>" +
                 "</gesmes:Envelope>";
 
-        List<CurrExRateResource> resources = connector.deSerializeFeed(fakeXmlFromECB);
+        List<ExchangeRate> resources = connector.deSerializeFeed(fakeXmlFromECB);
         Assert.assertTrue(resources != null);
         Assert.assertTrue(resources.size() == 4);
         Assert.assertTrue(resources.stream().anyMatch(r -> r.getCurrencyCode().equals("USD")
