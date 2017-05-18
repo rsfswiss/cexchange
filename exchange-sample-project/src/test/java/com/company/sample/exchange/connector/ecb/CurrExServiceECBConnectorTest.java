@@ -42,7 +42,7 @@ public class CurrExServiceECBConnectorTest {
     }
 
     @Test
-    public void deSerializeFeed() throws Exception {
+    public void testDeSerializeFeed() throws Exception {
         String fakeXmlFromECB = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                 "<gesmes:Envelope xmlns:gesmes=\"http://www.gesmes.org/xml/2002-08-01\" xmlns=\"http://www.ecb.int/vocabulary/2002-08-01/eurofxref\">" +
                 "<gesmes:subject>Reference rates</gesmes:subject><gesmes:Sender><gesmes:name>European Central Bank</gesmes:name></gesmes:Sender>" +

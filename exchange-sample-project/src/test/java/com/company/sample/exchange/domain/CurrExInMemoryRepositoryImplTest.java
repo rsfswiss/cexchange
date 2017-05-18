@@ -1,9 +1,11 @@
 package com.company.sample.exchange.domain;
 
+import com.company.sample.exchange.service.CurrExRateResource;
 import org.junit.Test;
 import org.springframework.util.StringUtils;
 
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -13,10 +15,13 @@ import static org.junit.Assert.assertTrue;
 public class CurrExInMemoryRepositoryImplTest {
 
     @Test
-    public void getAllExchangeRatesBasedOnEuroForCurrency() throws Exception {
+    public void testGetAllExchangeRatesBasedOnEuroForCurrency() throws Exception {
         CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
-        repoImpl.addOverwriting("123.6","USD","20100911");
-        repoImpl.addOverwriting("124.9","USD","20100912");
+        List<CurrExRateResource> resources = new ArrayList<>();
+        resources.add(new CurrExRateResource("123.6","USD","20100911"));
+        resources.add(new CurrExRateResource("124.9","USD","20100912"));
+        repoImpl.updateRepository(resources);
+
         assertFalse(
                 StringUtils.isEmpty(repoImpl.getAllExchangeRatesBasedOnEuroForCurrency("USD")));
         assertTrue(
@@ -34,11 +39,14 @@ public class CurrExInMemoryRepositoryImplTest {
     }
 
     @Test
-    public void getAllCurrencyCodes() throws Exception {
+    public void testGetAllCurrencyCodes() throws Exception {
         CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
-        repoImpl.addOverwriting("123.6","USD","20100911");
-        repoImpl.addOverwriting("124.9","USD","20100912");
-        repoImpl.addOverwriting("124.1","JPY","20100912");
+        List<CurrExRateResource> resources = new ArrayList<>();
+        resources.add(new CurrExRateResource("123.6","USD","20100911"));
+        resources.add(new CurrExRateResource("124.9","USD","20100912"));
+        resources.add(new CurrExRateResource("124.1","JPY","20100912"));
+        repoImpl.updateRepository(resources);
+
         assertFalse(
                 StringUtils.isEmpty(repoImpl.getAllCurrencyCodes()));
         assertTrue(
@@ -51,56 +59,61 @@ public class CurrExInMemoryRepositoryImplTest {
                         anyMatch(c -> c.equals("JPY")));
     }
 
+
     @Test
-    public void deleteAll() throws Exception {
+    public void testUpdateRepository() throws Exception {
         CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
-        repoImpl.addOverwriting("123.6","USD","20100911");
-        repoImpl.addOverwriting("124.9","JPY","20100912");
-        repoImpl.deleteAll();
-        assertTrue(
-                StringUtils.isEmpty(repoImpl.findByCurrencyCodeAndDate("USD","20100911")));
-        assertTrue(
-                StringUtils.isEmpty(repoImpl.findByCurrencyCodeAndDate("JPY","20100912")));
+        List<CurrExRateResource> resources = new ArrayList<>();
+        resources.add(new CurrExRateResource("123.6","USD","20100911"));
+        resources.add(new CurrExRateResource("124.9","USD","20100912"));
+        repoImpl.updateRepository(resources);
+
+        assertEquals(repoImpl.findByCurrencyCodeAndDate("USD", "20100911"), "123.6");
+        assertEquals(repoImpl.findByCurrencyCodeAndDate("USD", "20100912"), "124.9");
+
+        resources = new ArrayList<>();
+        resources.add(new CurrExRateResource("923.6","USD","20100911"));
+        resources.add(new CurrExRateResource("924.9","USD","20100912"));
+        repoImpl.updateRepository(resources);
+
+        assertEquals(repoImpl.findByCurrencyCodeAndDate("USD", "20100911"), "923.6");
+        assertEquals(repoImpl.findByCurrencyCodeAndDate("USD", "20100912"), "924.9");
+    }
+
+
+    @Test
+    public void testFindByCurrencyCodeAndDate() throws Exception {
+        CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
+        List<CurrExRateResource> resources = new ArrayList<>();
+        resources.add(new CurrExRateResource("123.6","USD","20100911"));
+        repoImpl.updateRepository(resources);
+
+        assertEquals(repoImpl.findByCurrencyCodeAndDate("USD", "20100911"), "123.6");
     }
 
     @Test
-    public void addOverwriting() throws Exception {
+    public void testGetMaxAvailableDateStr() throws Exception {
         CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
-        repoImpl.addOverwriting("123.6","USD","20100911");
-        assertTrue(
-                Objects.equals(repoImpl.findByCurrencyCodeAndDate("USD", "20100911"), "123.6"));
-        repoImpl.addOverwriting("123.7","USD","20100911");
-        assertTrue(
-                Objects.equals(repoImpl.findByCurrencyCodeAndDate("USD", "20100911"), "123.7"));
-    }
-
-
-    @Test
-    public void findByCurrencyCodeAndDate() throws Exception {
-        CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
-        repoImpl.addOverwriting("123.6","USD","20100911");
-        assertTrue(
-                Objects.equals(repoImpl.findByCurrencyCodeAndDate("USD", "20100911"), "123.6"));
-    }
-
-    @Test
-    public void getMaxAvailableDateStr() throws Exception {
-        CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
-        repoImpl.addOverwriting("123.6","USD","20100911");
-        repoImpl.addOverwriting("123.7","USD","20100912");
-        repoImpl.addOverwriting("123.7","USD","20100913");
-        repoImpl.addOverwriting("123.7","USD","20010912");
+        List<CurrExRateResource> resources = new ArrayList<>();
+        resources.add(new CurrExRateResource("123.6","USD","20100911"));
+        resources.add(new CurrExRateResource("123.7","USD","20100912"));
+        resources.add(new CurrExRateResource("123.7","USD","20100913"));
+        resources.add(new CurrExRateResource("123.7","USD","20010912"));
+        repoImpl.updateRepository(resources);
 
         assertEquals(repoImpl.getMaxAvailableDateStr(), "20100913");
     }
 
     @Test
-    public void getMinAvailableDateStr() throws Exception {
+    public void testGetMinAvailableDateStr() throws Exception {
         CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
-        repoImpl.addOverwriting("123.6","USD","20100911");
-        repoImpl.addOverwriting("123.7","USD","20100912");
-        repoImpl.addOverwriting("123.7","USD","20100913");
-        repoImpl.addOverwriting("123.7","USD","20070912");
+        List<CurrExRateResource> resources = new ArrayList<>();
+        resources.add(new CurrExRateResource("123.6","USD","20100911"));
+        resources.add(new CurrExRateResource("123.7","USD","20100912"));
+        resources.add(new CurrExRateResource("123.7","USD","20100913"));
+        resources.add(new CurrExRateResource("123.7","USD","20070912"));
+        repoImpl.updateRepository(resources);
+
         assertEquals(repoImpl.getMinAvailableDateStr(), "20070912");
 
     }

@@ -4,6 +4,7 @@ import com.company.sample.exchange.service.CurrExRateResource;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -24,10 +25,10 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
 
     //key is currencyCode#Date, e.g. USD#20170515
     //value is the exchange rate, e.g. 125.6
-    private static HashMap<String,String> inMemoryContainerMap = new HashMap<>();
+    private static final HashMap<String,String> inMemoryContainerMap = new HashMap<>();
 
     //conveniently keeps track of all different currency codes
-    private static ArrayList<String> allCurrencyCodes = new ArrayList<>();
+    private static final ArrayList<String> allCurrencyCodes = new ArrayList<>();
 
     //needed to initialize the status of the max and min dates
     private final static String MIN_DATE = "00010101";
@@ -39,23 +40,38 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
     //conveniently keeping track of the newest inserted date
     private String maxAvailableDateStr = MIN_DATE;
 
+    /**
+     * Replaces the contents of the hashmap with the new exchange rates.
+     * Calculates new values for the max and min date values available.
+     * Updates the list of available currencies.
+     *
+     * This operation needs to be synchronized, it is only meant to be executed
+     * by one single thread at a time (typically once per day)
+     *
+     * The internal inMemoryContainerMap and allCurrencyCodes also need
+     * to be protected against readers during the update operation.
+     *
+     * @param resources the new contents of the repository
+     */
     @Override
-    public synchronized void deleteAll() {
-        //not using clear operation since we use iterators. ConcurrentHashmap seems a bit overkill for this use case
-        inMemoryContainerMap = new HashMap<>();
-        resetMaxAndMinAvailableDateStr();
-        allCurrencyCodes.clear();
-    }
-
-    @Override
-    public synchronized void addOverwriting(String exchangeRate, String currencyCode, String dateStr) {
-        updateMaxAndMinAvailableDateStr(dateStr);
+    public synchronized void updateRepository(List<CurrExRateResource> resources) {
         synchronized (inMemoryContainerMap) { //to avoid ConcurrentModification exception while iterating in getAllExchangeRatesBasedOnEuroForCurrency
-            inMemoryContainerMap.put(generateKey(currencyCode, dateStr), exchangeRate);
+            inMemoryContainerMap.clear();
+            for(CurrExRateResource resource : resources){
+                inMemoryContainerMap.put(generateKey(resource.getCurrencyCode(),
+                                         resource.getExchangeRateDate()), resource.getExchangeRate());
+            }
         }
-        synchronized (allCurrencyCodes) {//to protect readers of the ArrayList at getAllCurrencyCodes
-            if (!allCurrencyCodes.contains(currencyCode.toUpperCase()))
-                allCurrencyCodes.add(currencyCode.toUpperCase());
+        synchronized (allCurrencyCodes) { //to protect readers of the ArrayList at getAllCurrencyCodes
+            allCurrencyCodes.clear();
+            resetMaxAndMinAvailableDateStr();
+            for(CurrExRateResource resource : resources){
+                updateMaxAndMinAvailableDateStr(resource.getExchangeRateDate());
+                synchronized (allCurrencyCodes) {
+                    if (!allCurrencyCodes.contains(resource.getCurrencyCode().toUpperCase()))
+                        allCurrencyCodes.add(resource.getCurrencyCode().toUpperCase());
+                }
+            }
         }
     }
 
@@ -105,7 +121,9 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
 
     @Override
     public List<String> getAllCurrencyCodes() {
-        return allCurrencyCodes;
+        synchronized(allCurrencyCodes){ //users get a copy to protect read while daily updates
+            return Collections.unmodifiableList(new ArrayList<String>(allCurrencyCodes));
+        }
     }
 
     private String generateKey(String currencyCode, String dateStr) {

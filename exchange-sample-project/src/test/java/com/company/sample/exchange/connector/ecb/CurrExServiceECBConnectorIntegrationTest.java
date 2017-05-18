@@ -42,7 +42,7 @@ public class CurrExServiceECBConnectorIntegrationTest {
 
     @Test
     @Ignore
-    public void fetchCurrExRateResources() throws Exception {
+    public void testFetchCurrExRateResources() throws Exception {
         String xmlFeedFromECB = connector.fetchXmlFeed();
         Assert.assertFalse(StringUtils.isEmpty(xmlFeedFromECB));
         //arbitrary sanity check

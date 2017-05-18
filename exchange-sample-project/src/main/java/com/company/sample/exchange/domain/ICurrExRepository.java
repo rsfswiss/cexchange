@@ -15,9 +15,13 @@ import java.util.List;
  */
 public interface ICurrExRepository {
 
-    void deleteAll();
-
-    void addOverwriting(String exchangeRate, String currencyCode, String dateStr);
+    /**
+     * Replaces the contents of the repository with
+     * the ones in the passed container
+     *
+     * @param resources the new contents of the repository
+     */
+    void updateRepository(List<CurrExRateResource> resources);
 
     /**
      * Will return the exchange rate value in string format
