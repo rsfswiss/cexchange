@@ -27,9 +27,9 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
     private static HashMap<String,String> inMemoryContainerMap = new HashMap<>();
 
     //conveniently keeps track of all different currency codes
-    private ArrayList<String> allCurrencyCodes = new ArrayList<>();
+    private static ArrayList<String> allCurrencyCodes = new ArrayList<>();
 
-    //needed to ninitialize the status of the max and min dates
+    //needed to initialize the status of the max and min dates
     private final static String MIN_DATE = "00010101";
     private final static String MAX_DATE = "99991212";
 
@@ -50,8 +50,13 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
     @Override
     public synchronized void addOverwriting(String exchangeRate, String currencyCode, String dateStr) {
         updateMaxAndMinAvailableDateStr(dateStr);
-        inMemoryContainerMap.put(generateKey(currencyCode, dateStr),exchangeRate);
-        if(!allCurrencyCodes.contains(currencyCode.toUpperCase())) allCurrencyCodes.add(currencyCode.toUpperCase());
+        synchronized (inMemoryContainerMap) { //to avoid ConcurrentModification exception while iterating in getAllExchangeRatesBasedOnEuroForCurrency
+            inMemoryContainerMap.put(generateKey(currencyCode, dateStr), exchangeRate);
+        }
+        synchronized (allCurrencyCodes) {//to protect readers of the ArrayList at getAllCurrencyCodes
+            if (!allCurrencyCodes.contains(currencyCode.toUpperCase()))
+                allCurrencyCodes.add(currencyCode.toUpperCase());
+        }
     }
 
     /**
@@ -83,14 +88,16 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
     public List<CurrExRateResource> getAllExchangeRatesBasedOnEuroForCurrency(String currencyCode) {
         //an iterator is used, but the only update operation always acts on a new instance
         List<CurrExRateResource> resources = new ArrayList<>();
-        for(String key : inMemoryContainerMap.keySet()) {
-            //currency code is the first part of the key
-            if(key.startsWith(currencyCode.toUpperCase())) {
-                //the value is the exchg rate and the date is the second part of the key
-                String exchgDate = key.replace(currencyCode.toUpperCase() + "#","");
-                resources.add(new CurrExRateResource(inMemoryContainerMap.get(key),
-                        currencyCode.toUpperCase(),
-                        exchgDate));
+        synchronized(inMemoryContainerMap) { //to avoid ConcurrentModification if the request is during the daily update operation
+            for (String key : inMemoryContainerMap.keySet()) {
+                //currency code is the first part of the key
+                if (key.startsWith(currencyCode.toUpperCase())) {
+                    //the value is the exchg rate and the date is the second part of the key
+                    String exchgDate = key.replace(currencyCode.toUpperCase() + "#", "");
+                    resources.add(new CurrExRateResource(inMemoryContainerMap.get(key),
+                            currencyCode.toUpperCase(),
+                            exchgDate));
+                }
             }
         }
         return resources;
