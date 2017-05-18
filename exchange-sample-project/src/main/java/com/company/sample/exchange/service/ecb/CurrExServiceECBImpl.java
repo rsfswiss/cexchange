@@ -57,6 +57,7 @@ public class CurrExServiceECBImpl implements ICurrExService {
         List<CurrExRateResource> resourcesResult =  ecbConnector.fetchCurrExRateResources();
         if(resourcesResult == null || resourcesResult.isEmpty())
             throw new Exception("Connector returned empty set of resources");
+        //TODO: mechanism to still serve the old values during the update operation (short period of time though)
         currExRepository.deleteAll();
         resourcesResult.forEach(r ->
                 currExRepository.addOverwriting(r.getExchangeRate(),r.getCurrencyCode(),r.getExchangeRateDate()));

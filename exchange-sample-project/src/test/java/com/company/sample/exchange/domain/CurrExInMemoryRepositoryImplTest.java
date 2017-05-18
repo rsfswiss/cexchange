@@ -5,6 +5,10 @@ import org.springframework.util.StringUtils;
 
 import java.util.Objects;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 
 public class CurrExInMemoryRepositoryImplTest {
 
@@ -13,16 +17,16 @@ public class CurrExInMemoryRepositoryImplTest {
         CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
         repoImpl.addOverwriting("123.6","USD","20100911");
         repoImpl.addOverwriting("124.9","USD","20100912");
-        org.junit.Assert.assertFalse(
+        assertFalse(
                 StringUtils.isEmpty(repoImpl.getAllExchangeRatesBasedOnEuroForCurrency("USD")));
-        org.junit.Assert.assertTrue(
+        assertTrue(
                 repoImpl.getAllExchangeRatesBasedOnEuroForCurrency("USD").size() == 2);
-        org.junit.Assert.assertTrue(
+        assertTrue(
                 repoImpl.getAllExchangeRatesBasedOnEuroForCurrency("USD").stream().
                         anyMatch(c -> c.getExchangeRate().equals("123.6") &&
-                        c.getCurrencyCode().equals("USD") &&
-                        c.getExchangeRateDate().equals("20100911")));
-        org.junit.Assert.assertTrue(
+                                c.getCurrencyCode().equals("USD") &&
+                                c.getExchangeRateDate().equals("20100911")));
+        assertTrue(
                 repoImpl.getAllExchangeRatesBasedOnEuroForCurrency("USD").stream().
                         anyMatch(c -> c.getExchangeRate().equals("124.9") &&
                                 c.getCurrencyCode().equals("USD") &&
@@ -35,14 +39,14 @@ public class CurrExInMemoryRepositoryImplTest {
         repoImpl.addOverwriting("123.6","USD","20100911");
         repoImpl.addOverwriting("124.9","USD","20100912");
         repoImpl.addOverwriting("124.1","JPY","20100912");
-        org.junit.Assert.assertFalse(
+        assertFalse(
                 StringUtils.isEmpty(repoImpl.getAllCurrencyCodes()));
-        org.junit.Assert.assertTrue(
+        assertTrue(
                 repoImpl.getAllCurrencyCodes().size() == 2);
-        org.junit.Assert.assertTrue(
+        assertTrue(
                 repoImpl.getAllCurrencyCodes().stream().
                         anyMatch(c -> c.equals("USD")));
-        org.junit.Assert.assertTrue(
+        assertTrue(
                 repoImpl.getAllCurrencyCodes().stream().
                         anyMatch(c -> c.equals("JPY")));
     }
@@ -53,9 +57,9 @@ public class CurrExInMemoryRepositoryImplTest {
         repoImpl.addOverwriting("123.6","USD","20100911");
         repoImpl.addOverwriting("124.9","JPY","20100912");
         repoImpl.deleteAll();
-        org.junit.Assert.assertTrue(
+        assertTrue(
                 StringUtils.isEmpty(repoImpl.findByCurrencyCodeAndDate("USD","20100911")));
-        org.junit.Assert.assertTrue(
+        assertTrue(
                 StringUtils.isEmpty(repoImpl.findByCurrencyCodeAndDate("JPY","20100912")));
     }
 
@@ -63,10 +67,10 @@ public class CurrExInMemoryRepositoryImplTest {
     public void addOverwriting() throws Exception {
         CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
         repoImpl.addOverwriting("123.6","USD","20100911");
-        org.junit.Assert.assertTrue(
+        assertTrue(
                 Objects.equals(repoImpl.findByCurrencyCodeAndDate("USD", "20100911"), "123.6"));
         repoImpl.addOverwriting("123.7","USD","20100911");
-        org.junit.Assert.assertTrue(
+        assertTrue(
                 Objects.equals(repoImpl.findByCurrencyCodeAndDate("USD", "20100911"), "123.7"));
     }
 
@@ -75,7 +79,7 @@ public class CurrExInMemoryRepositoryImplTest {
     public void findByCurrencyCodeAndDate() throws Exception {
         CurrExInMemoryRepositoryImpl repoImpl = new CurrExInMemoryRepositoryImpl();
         repoImpl.addOverwriting("123.6","USD","20100911");
-        org.junit.Assert.assertTrue(
+        assertTrue(
                 Objects.equals(repoImpl.findByCurrencyCodeAndDate("USD", "20100911"), "123.6"));
     }
 
@@ -87,8 +91,7 @@ public class CurrExInMemoryRepositoryImplTest {
         repoImpl.addOverwriting("123.7","USD","20100913");
         repoImpl.addOverwriting("123.7","USD","20010912");
 
-        org.junit.Assert.assertTrue(
-                Objects.equals(repoImpl.getMaxAvailableDateStr(), "20100913"));
+        assertEquals(repoImpl.getMaxAvailableDateStr(), "20100913");
     }
 
     @Test
@@ -97,10 +100,9 @@ public class CurrExInMemoryRepositoryImplTest {
         repoImpl.addOverwriting("123.6","USD","20100911");
         repoImpl.addOverwriting("123.7","USD","20100912");
         repoImpl.addOverwriting("123.7","USD","20100913");
-        repoImpl.addOverwriting("123.7","USD","20010912");
+        repoImpl.addOverwriting("123.7","USD","20070912");
+        assertEquals(repoImpl.getMinAvailableDateStr(), "20070912");
 
-        org.junit.Assert.assertTrue(
-                Objects.equals(repoImpl.getMinAvailableDateStr(), "20010912"));
     }
 
 }

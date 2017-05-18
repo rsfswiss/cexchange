@@ -15,6 +15,8 @@ import java.util.List;
  *
  * Does not perform validation.
  *
+ * Move to ConcurrentHashmap if post operations are needed in the future
+ *
  * Currency codes are stored in uppercase.
  */
 @Repository
@@ -22,20 +24,25 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
 
     //key is currencyCode#Date, e.g. USD#20170515
     //value is the exchange rate, e.g. 125.6
-    private HashMap<String,String> inMemoryContainerMap = new HashMap<>();
+    private static HashMap<String,String> inMemoryContainerMap = new HashMap<>();
 
     //conveniently keeps track of all different currency codes
     private ArrayList<String> allCurrencyCodes = new ArrayList<>();
 
+    //needed to ninitialize the status of the max and min dates
+    private final static String MIN_DATE = "00010101";
+    private final static String MAX_DATE = "99991212";
+
     //conveniently keeping track of the oldest inserted date
-    private String minAvailableDateStr = "00010101";
+    private String minAvailableDateStr = MAX_DATE;
 
     //conveniently keeping track of the newest inserted date
-    private String maxAvailableDateStr = "99991212";
+    private String maxAvailableDateStr = MIN_DATE;
 
     @Override
     public synchronized void deleteAll() {
-        inMemoryContainerMap.clear();
+        //not using clear operation since we use iterators. ConcurrentHashmap seems a bit overkill for this use case
+        inMemoryContainerMap = new HashMap<>();
         resetMaxAndMinAvailableDateStr();
         allCurrencyCodes.clear();
     }
@@ -74,14 +81,18 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
 
     @Override
     public List<CurrExRateResource> getAllExchangeRatesBasedOnEuroForCurrency(String currencyCode) {
-        //convenience ugly implementation...
+        //an iterator is used, but the only update operation always acts on a new instance
         List<CurrExRateResource> resources = new ArrayList<>();
-        inMemoryContainerMap.keySet().stream().
-                filter(k -> k.startsWith(currencyCode.toUpperCase())). //currency code is the first part oif the key
-                forEach(k -> resources.add(new CurrExRateResource(inMemoryContainerMap.get(k), //the value is the exchg rate
-                                                currencyCode.toUpperCase(),
-                                                //the date is the second part of the key
-                                                k.replace(currencyCode.toUpperCase() + "#",""))));
+        for(String key : inMemoryContainerMap.keySet()) {
+            //currency code is the first part of the key
+            if(key.startsWith(currencyCode.toUpperCase())) {
+                //the value is the exchg rate and the date is the second part of the key
+                String exchgDate = key.replace(currencyCode.toUpperCase() + "#","");
+                resources.add(new CurrExRateResource(inMemoryContainerMap.get(key),
+                        currencyCode.toUpperCase(),
+                        exchgDate));
+            }
+        }
         return resources;
     }
 
@@ -95,8 +106,8 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
     }
 
     private void resetMaxAndMinAvailableDateStr() {
-        minAvailableDateStr = "99991212";
-        maxAvailableDateStr = "00010101";
+        minAvailableDateStr = MAX_DATE;
+        maxAvailableDateStr = MIN_DATE;
     }
 
     private void updateMaxAndMinAvailableDateStr(String dateStr) {
