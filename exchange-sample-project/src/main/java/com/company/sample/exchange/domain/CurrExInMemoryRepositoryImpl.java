@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Wraps a Hasmap as a very simple <key,value> pair
@@ -40,6 +43,14 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
     //conveniently keeping track of the newest inserted date
     private String maxAvailableDateStr = MIN_DATE;
 
+    private final static ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+
+    private final static Lock readLock = readWriteLock.readLock();
+
+    private final static Lock writeLock = readWriteLock.writeLock();
+
+
+
     /**
      * Replaces the contents of the hashmap with the new exchange rates.
      * Calculates new values for the max and min date values available.
@@ -54,24 +65,25 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
      * @param resources the new contents of the repository
      */
     @Override
-    public synchronized void updateRepository(List<CurrExRateResource> resources) {
-        synchronized (inMemoryContainerMap) { //to avoid ConcurrentModification exception while iterating in getAllExchangeRatesBasedOnEuroForCurrency
+    public void updateRepository(List<CurrExRateResource> resources) {
+        //to avoid ConcurrentModification exception while iterating in getAllExchangeRatesBasedOnEuroForCurrency
+        //to protect readers of the ArrayList at getAllCurrencyCodes
+        writeLock.lock(); //blocks all readers during the update operation
+        try {
             inMemoryContainerMap.clear();
-            for(CurrExRateResource resource : resources){
-                inMemoryContainerMap.put(generateKey(resource.getCurrencyCode(),
-                                         resource.getExchangeRateDate()), resource.getExchangeRate());
-            }
-        }
-        synchronized (allCurrencyCodes) { //to protect readers of the ArrayList at getAllCurrencyCodes
             allCurrencyCodes.clear();
             resetMaxAndMinAvailableDateStr();
-            for(CurrExRateResource resource : resources){
+            for (CurrExRateResource resource : resources) {
+                inMemoryContainerMap.put(generateKey(resource.getCurrencyCode(),
+                        resource.getExchangeRateDate()), resource.getExchangeRate());
                 updateMaxAndMinAvailableDateStr(resource.getExchangeRateDate());
-                synchronized (allCurrencyCodes) {
-                    if (!allCurrencyCodes.contains(resource.getCurrencyCode().toUpperCase()))
-                        allCurrencyCodes.add(resource.getCurrencyCode().toUpperCase());
-                }
+                if (!allCurrencyCodes.contains(resource.getCurrencyCode().toUpperCase()))
+                    allCurrencyCodes.add(resource.getCurrencyCode().toUpperCase());
             }
+        }
+        finally
+        {
+            writeLock.unlock();
         }
     }
 
@@ -87,24 +99,40 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
      */
     @Override
     public String findByCurrencyCodeAndDate(String currencyCode, String dateStr) {
-        return inMemoryContainerMap.get(generateKey(currencyCode, dateStr));
+        readLock.lock(); //forces wait during update operation
+        try {
+            return inMemoryContainerMap.get(generateKey(currencyCode, dateStr));
+        } finally {
+            readLock.unlock();
+        }
     }
 
     @Override
     public String getMaxAvailableDateStr() {
-        return maxAvailableDateStr;
+        readLock.lock(); //forces wait during update operation
+        try {
+            return maxAvailableDateStr;
+        } finally {
+            readLock.unlock();
+        }
     }
 
     @Override
     public String getMinAvailableDateStr() {
-        return minAvailableDateStr;
+        readLock.lock(); //forces wait during update operation
+        try {
+            return minAvailableDateStr;
+        } finally {
+            readLock.unlock();
+        }
     }
 
     @Override
     public List<CurrExRateResource> getAllExchangeRatesBasedOnEuroForCurrency(String currencyCode) {
-        //an iterator is used, but the only update operation always acts on a new instance
+        //a manually synchronized iterator is used
         List<CurrExRateResource> resources = new ArrayList<>();
-        synchronized(inMemoryContainerMap) { //to avoid ConcurrentModification if the request is during the daily update operation
+        readLock.lock(); //forces wait during update operation
+        try {
             for (String key : inMemoryContainerMap.keySet()) {
                 //currency code is the first part of the key
                 if (key.startsWith(currencyCode.toUpperCase())) {
@@ -115,14 +143,19 @@ public class CurrExInMemoryRepositoryImpl implements ICurrExRepository {
                             exchgDate));
                 }
             }
+        } finally {
+            readLock.unlock();
         }
         return resources;
     }
 
     @Override
     public List<String> getAllCurrencyCodes() {
-        synchronized(allCurrencyCodes){ //users get a copy to protect read while daily updates
+        readLock.lock(); //forces wait during update operation
+        try{
             return Collections.unmodifiableList(new ArrayList<String>(allCurrencyCodes));
+        } finally {
+            readLock.unlock();
         }
     }
 
